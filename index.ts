@@ -1,23 +1,49 @@
+import "dotenv/config";
 import cors from "cors";
-import dotenv from "dotenv";
-import express, { type Request, type Response } from "express";
-import mongoose from "mongoose";
-
-dotenv.config();
+import express from "express";
+import morgan from "morgan";
+import { connectDb, closeDb } from "./config/db.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import authRoutes from "./routes/auth.routes.js";
+import campaignRoutes from "./routes/campaign.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT ?? 5000;
+
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:3000"];
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
+app.use(morgan("dev"));
 
-const PORT = process.env.PORT || 5000;
-
-mongoose
-  .connect(process.env.MONGODB_URI as string)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.log(err));
-
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req, res) => {
   res.send("Crowdfunding Server is Running");
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.use("/api/auth", authRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/users", userRoutes);
+
+app.use(errorHandler);
+
+async function start() {
+  await connectDb();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+start();
+
+process.on("SIGINT", async () => {
+  console.log("Shutting down gracefully...");
+  await closeDb();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("Shutting down gracefully...");
+  await closeDb();
+  process.exit(0);
+});
