@@ -28,9 +28,11 @@ const updateCampaignSchema = z.object({
 router.post("/", verifyToken, requireRole("creator"), validate(createCampaignSchema), async (req, res) => {
   const { title, story, category, fundingGoal, minContribution, deadline, rewardInfo, imageURL } = req.body;
 
-  const { campaigns } = getCollections();
+  const { campaigns, users } = getCollections();
+  const creator = await users.findOne({ email: req.user!.email });
   const campaign = {
     creatorEmail: req.user!.email,
+    creatorName: creator?.name ?? req.user!.email,
     title,
     story,
     category,
@@ -98,15 +100,23 @@ router.patch("/:id", verifyToken, requireRole("creator"), validate(updateCampaig
 });
 
 router.delete("/:id", verifyToken, requireRole("creator"), async (req, res) => {
-  const { campaigns } = getCollections();
+  const { campaigns, contributions, users } = getCollections();
   const oid = toObjectId(req.params.id);
   const campaign = await campaigns.findOne({ _id: oid });
 
   if (!campaign) throw new AppError(404, "Campaign not found");
   if (campaign.creatorEmail !== req.user!.email) throw new AppError(403, "Not your campaign");
 
+  const approvedContributions = await contributions
+    .find({ campaignId: req.params.id, status: "approved" })
+    .toArray();
+
+  for (const c of approvedContributions) {
+    await users.updateOne({ email: c.supporterEmail }, { $inc: { credits: c.amount } });
+  }
+
   await campaigns.deleteOne({ _id: oid });
-  res.json({ message: "Campaign deleted" });
+  res.json({ message: "Campaign deleted", refunded: approvedContributions.length });
 });
 
 export default router;

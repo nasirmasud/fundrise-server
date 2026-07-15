@@ -29,6 +29,7 @@ export interface User {
 export interface Campaign {
   _id?: ObjectId;
   creatorEmail: string;
+  creatorName: string;
   title: string;
   story: string;
   category: string;
@@ -46,18 +47,23 @@ export interface Campaign {
 export interface Contribution {
   _id?: ObjectId;
   campaignId: string;
-  supporterEmail: string;
+  campaignTitle: string;
   amount: number;
+  supporterEmail: string;
+  supporterName: string;
+  creatorEmail: string;
+  creatorName: string;
   status: "pending" | "approved" | "rejected";
-  createdAt: Date;
+  date: Date;
 }
 
 export interface Notification {
   _id?: ObjectId;
-  email: string;
   message: string;
+  toEmail: string;
+  actionRoute: string;
+  time: Date;
   read: boolean;
-  createdAt: Date;
 }
 
 export interface Transaction {

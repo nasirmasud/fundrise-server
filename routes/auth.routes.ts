@@ -51,7 +51,7 @@ router.post("/register", authLimiter, validate(registerSchema), async (req, res)
     password: hashedPassword,
     role,
     photoURL: photoURL ?? "",
-    credits: role === "creator" ? 50 : 20,
+    credits: role === "creator" ? 20 : 50,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -118,7 +118,7 @@ router.post("/google", authLimiter, validate(googleSchema), async (req, res) => 
     email: payload.email,
     photoURL: payload.picture ?? "",
     role: "supporter" as const,
-    credits: 20,
+    credits: 50,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
