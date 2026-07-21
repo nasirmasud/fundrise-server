@@ -73,6 +73,32 @@ router.get("/my", verifyToken, requireRole("creator"), async (req, res) => {
   res.json(results);
 });
 
+// Creator stats
+router.get("/creator-stats/:email", verifyToken, async (req, res) => {
+  const { campaigns, contributions } = getCollections();
+  const email = req.params.email;
+
+  const allCampaigns = await campaigns.find({ creatorEmail: email }).toArray();
+
+  const totalCampaigns = allCampaigns.length;
+  const activeCampaigns = allCampaigns.filter(
+    (c) => c.status === "approved" && new Date(c.deadline) >= new Date()
+  ).length;
+  const totalRaised = allCampaigns.reduce((sum, c) => sum + (c.raisedAmount || 0), 0);
+
+  const pendingContributions = await contributions.countDocuments({
+    creatorEmail: email,
+    status: "pending",
+  });
+
+  res.json({
+    totalCampaigns,
+    activeCampaigns,
+    totalRaised,
+    pendingContributions,
+  });
+});
+
 function toObjectId(id: unknown) {
   return new ObjectId(String(id));
 }
