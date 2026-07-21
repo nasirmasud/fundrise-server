@@ -92,7 +92,7 @@ router.post("/google", authLimiter, validate(googleSchema), async (req, res) => 
 
   const ticket = await googleClient.verifyIdToken({
     idToken: token,
-    audience: process.env.GOOGLE_CLIENT_ID as string,
+    audience: process.env.FIREBASE_PROJECT_ID,
   });
 
   const payload = ticket.getPayload();
