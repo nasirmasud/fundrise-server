@@ -99,6 +99,63 @@ router.patch("/:id", verifyToken, requireRole("creator"), validate(updateCampaig
   res.json(updated);
 });
 
+// Admin: list all campaigns (with optional status filter)
+router.get("/all", verifyToken, requireRole("admin"), async (req, res) => {
+  const { campaigns } = getCollections();
+  const { status } = req.query;
+
+  const filter: Record<string, unknown> = {};
+  if (status) filter.status = status;
+
+  const results = await campaigns.find(filter).sort({ createdAt: -1 }).toArray();
+  res.json(results);
+});
+
+// Admin: approve a campaign
+const statusSchema = z.object({
+  status: z.enum(["approved", "rejected", "suspended"]),
+});
+
+router.patch(
+  "/:id/status",
+  verifyToken,
+  requireRole("admin"),
+  validate(statusSchema),
+  async (req, res) => {
+    const { campaigns, notifications } = getCollections();
+    const oid = toObjectId(req.params.id);
+    const campaign = await campaigns.findOne({ _id: oid });
+    if (!campaign) throw new AppError(404, "Campaign not found");
+
+    await campaigns.updateOne(
+      { _id: oid },
+      { $set: { status: req.body.status, updatedAt: new Date() } }
+    );
+
+    await notifications.insertOne({
+      message: `Your campaign "${campaign.title}" has been ${req.body.status}`,
+      toEmail: campaign.creatorEmail,
+      actionRoute: "/dashboard/my-campaigns",
+      time: new Date(),
+      read: false,
+    });
+
+    res.json({ message: `Campaign ${req.body.status}`, status: req.body.status });
+  }
+);
+
+// Admin: delete any campaign (no refund)
+router.delete("/:id", verifyToken, requireRole("admin"), async (req, res) => {
+  const { campaigns } = getCollections();
+  const oid = toObjectId(req.params.id);
+  const campaign = await campaigns.findOne({ _id: oid });
+  if (!campaign) throw new AppError(404, "Campaign not found");
+
+  await campaigns.deleteOne({ _id: oid });
+  res.json({ message: "Campaign deleted by admin" });
+});
+
+// Creator: delete own campaign (with refund)
 router.delete("/:id", verifyToken, requireRole("creator"), async (req, res) => {
   const { campaigns, contributions, users } = getCollections();
   const oid = toObjectId(req.params.id);
