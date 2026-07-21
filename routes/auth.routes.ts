@@ -2,11 +2,11 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { OAuth2Client } from "google-auth-library";
 import rateLimit from "express-rate-limit";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { getCollections } from "../utils/getCollections.js";
+import { getFirebaseAuth } from "../config/firebase-admin.js";
 
 const router = Router();
 
@@ -15,8 +15,6 @@ const authLimiter = rateLimit({
   max: 20,
   message: { message: "Too many requests, please try again later" },
 });
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const registerSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -90,19 +88,15 @@ router.post("/login", authLimiter, validate(loginSchema), async (req, res) => {
 router.post("/google", authLimiter, validate(googleSchema), async (req, res) => {
   const { token } = req.body;
 
-  const ticket = await googleClient.verifyIdToken({
-    idToken: token,
-    audience: process.env.FIREBASE_PROJECT_ID,
-  });
+  const decodedToken = await getFirebaseAuth().verifyIdToken(token);
 
-  const payload = ticket.getPayload();
-  if (!payload?.email) {
+  if (!decodedToken.email) {
     throw new AppError(400, "Invalid Google token");
   }
 
   const { users } = getCollections();
 
-  const existingUser = await users.findOne({ email: payload.email });
+  const existingUser = await users.findOne({ email: decodedToken.email });
 
   if (existingUser) {
     const jwtToken = jwt.sign({ email: existingUser.email, role: existingUser.role }, process.env.JWT_SECRET!, { expiresIn: "7d" });
@@ -114,9 +108,9 @@ router.post("/google", authLimiter, validate(googleSchema), async (req, res) => 
   }
 
   const newUser = {
-    name: payload.name ?? "User",
-    email: payload.email,
-    photoURL: payload.picture ?? "",
+    name: decodedToken.name ?? decodedToken.email,
+    email: decodedToken.email,
+    photoURL: decodedToken.picture ?? "",
     role: "supporter" as const,
     credits: 50,
     createdAt: new Date(),
