@@ -70,7 +70,9 @@ export interface Transaction {
   _id?: ObjectId;
   email: string;
   type: "purchase" | "withdrawal" | "credit_added" | "credit_deducted";
+  credits?: number;
   amount: number;
+  transactionId?: string;
   description: string;
   createdAt: Date;
 }
