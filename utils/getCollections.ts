@@ -11,6 +11,7 @@ export function getCollections() {
     notifications: db.collection<Notification>("notifications"),
     transactions: db.collection<Transaction>("transactions"),
     withdrawalRequests: db.collection<WithdrawalRequest>("withdrawalRequests"),
+    reports: db.collection<Report>("reports"),
   };
 }
 
@@ -85,4 +86,15 @@ export interface WithdrawalRequest {
   accountNumber: string;
   status: "pending" | "paid" | "rejected";
   createdAt: Date;
+}
+
+export interface Report {
+  _id?: ObjectId;
+  reporterName: string;
+  reporterEmail: string;
+  campaignId: string;
+  campaignTitle: string;
+  reason: string;
+  date: Date;
+  status: "pending" | "resolved" | "dismissed";
 }
