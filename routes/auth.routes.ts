@@ -7,6 +7,7 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { getCollections } from "../utils/getCollections.js";
 import { getFirebaseAuth } from "../config/firebase-admin.js";
+import { grantStartingCredits } from "../utils/grant-credits.js";
 
 const router = Router();
 
@@ -43,13 +44,15 @@ router.post("/register", authLimiter, validate(registerSchema), async (req, res)
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
+  const credits = grantStartingCredits(role);
   const user = {
     name,
     email,
     password: hashedPassword,
     role,
     photoURL: photoURL ?? "",
-    credits: role === "creator" ? 20 : 50,
+    credits,
+    credited_on_registration: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
