@@ -23,6 +23,7 @@ export interface User {
   password?: string;
   role: "creator" | "supporter" | "admin";
   credits: number;
+  credited_on_registration?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
