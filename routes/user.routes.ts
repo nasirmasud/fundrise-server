@@ -23,6 +23,15 @@ router.get("/me", verifyToken, async (req, res) => {
   });
 });
 
+// Get role + credits by email (public, for client role gating)
+router.get("/:email/role", async (req, res) => {
+  const { users } = getCollections();
+  const user = await users.findOne({ email: req.params.email }, { projection: { role: 1, credits: 1 } });
+  if (!user) throw new AppError(404, "User not found");
+
+  res.json({ role: user.role, credits: user.credits });
+});
+
 // Admin: list all users
 router.get("/", verifyToken, requireRole("admin"), async (_req, res) => {
   const { users } = getCollections();
